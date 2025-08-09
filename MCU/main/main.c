@@ -38,18 +38,53 @@
 #include "simple_ctrl.h"
 #include "wifi.h"
 #include "gpio_led.h"
+#include "i2c_bus.h"
+#include "sensor_bh1750.h"
+#include "sensor_aht20.h"
 
 static const char *TAG = "APP-MAIN";
+
+#define ARRAY_SIZE(a)			(sizeof(a) / sizeof(a[0]))
 
 #define KEYBOARD_GPIO_PIN		GPIO_NUM_0
 #define LED_GREEN_GPIO_PIN		GPIO_NUM_4
 #define LED_RED_GPIO_PIN		GPIO_NUM_5
 
+#define I2C_BUS_SCL_PIN			GPIO_NUM_12
+#define I2C_BUS_SDA_PIN			GPIO_NUM_13
+
 #define LED_GREEN_BRIGHTNESS_MAX	32
 #define LED_RED_BRIGHTNESS_MAX		255
 
+#define SENSOR_TYPE_BRIGHTNESS		0x01
+#define SENSOR_TYPE_HUMIDITY		0x02
+#define SENSOR_TYPE_TEMPERATURE		0x03
+
+#define SENSOR_CMD_GET_COUNT		0x00
+#define SENSOR_CMD_GET_ITEM		0x01
+
+#define SENSOR_RESULT_OK		0x00
+#define SENSOR_RESULT_FAIL		0x01
+
+#define SENSOR_NUM_MAX			3
+#define SENSOR_NAME_LEN_MAX		32
+
 static bool config_mode;
 static QueueHandle_t led_queue;
+
+static struct i2c_dev_init i2c_dev_list[] = {
+	{ DEFAULT_BH1750_ADDR, "SENSOR-BH1750", sensor_bh1750_init, NULL },
+	{ DEFAULT_AHT20_ADDR,  "SENSOR-AHT20",  sensor_aht20_init, NULL },
+};
+
+static uint32_t sensor_count;
+
+struct sensor_info {
+	uint8_t type;
+	char name[SENSOR_NAME_LEN_MAX];
+};
+
+static struct sensor_info sensor_list[SENSOR_NUM_MAX];
 
 static void app_show_info(void)
 {
@@ -76,6 +111,9 @@ static void app_led_set_step(char step)
 
 static int app_ctrl_request(char *buffer, int buf_offs, int vaild_size, int buff_size)
 {
+	uint32_t count;
+	size_t len;
+
 	if (vaild_size < 1) {
 		ESP_LOGE(TAG, "Information command is incorrect");
 		return -1;
@@ -85,6 +123,37 @@ static int app_ctrl_request(char *buffer, int buf_offs, int vaild_size, int buff
 		goto nomem_err;
 
 	switch (buffer[buf_offs]) {
+	case SENSOR_CMD_GET_COUNT:		/* Get the number of sensors */
+		if (buff_size - buf_offs < 6)
+			goto nomem_err;
+		buffer[buf_offs + 1] = SENSOR_RESULT_OK;
+		buffer[buf_offs + 2] = (sensor_count >> 0) & 0xff;
+		buffer[buf_offs + 3] = (sensor_count >> 8) & 0xff;
+		buffer[buf_offs + 4] = (sensor_count >> 16) & 0xff;
+		buffer[buf_offs + 5] = (sensor_count >> 24) & 0xff;
+		return 6;
+	case SENSOR_CMD_GET_ITEM:		/* Get sensor information */
+		if (vaild_size != 5)
+			goto lllegal_err;
+		if (buff_size - buf_offs < 2 + 2 + SENSOR_NAME_LEN_MAX)
+			goto nomem_err;
+		count = (buffer[buf_offs + 1] << 0) |
+			(buffer[buf_offs + 2] << 8) |
+			(buffer[buf_offs + 3] << 16) |
+			(buffer[buf_offs + 4] << 24);
+		len = 0;
+		if (count >= SENSOR_NUM_MAX) {
+			buffer[buf_offs + 1] = SENSOR_RESULT_FAIL;
+			ESP_LOGE(TAG, "Get failed, count incorrect");
+		} else {
+			buffer[buf_offs + 2] = sensor_list[count].type;
+			buffer[buf_offs + 3] = 0;	/* Only one sensor */
+			len = strlen(sensor_list[count].name);
+			memcpy(buffer + buf_offs + 2 + 2, sensor_list[count].name, len);
+			buffer[buf_offs + 1] = SENSOR_RESULT_OK;
+			len += 2;
+		}
+		return 2 + len;
 	default:
 		goto lllegal_err;
 	}
@@ -167,6 +236,8 @@ static void app_led_task(void *arg)
 
 static bool app_event_notify_callback(struct event_bus_msg *msg)
 {
+	char buffer[4];
+
 	switch (msg->type) {
 	case EVENT_BUS_STARTUP:
 		app_led_set_step('r');
@@ -199,8 +270,26 @@ static bool app_event_notify_callback(struct event_bus_msg *msg)
 			config_mode = true;
 		}
 		break;
-	case EVENT_BUS_IR_RX:
-		ESP_LOGI(TAG, "IR received");
+	case EVENT_BUS_SENSOR_BRIGHTNESS_UPDATED:
+		buffer[0] = SENSOR_TYPE_BRIGHTNESS;
+		buffer[1] = (char)msg->param1;
+		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
+		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
+		simple_ctrl_notify(buffer, sizeof(buffer));
+		break;
+	case EVENT_BUS_SENSOR_HUMIDITY_UPDATED:
+		buffer[0] = SENSOR_TYPE_HUMIDITY;
+		buffer[1] = (char)msg->param1;
+		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
+		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
+		simple_ctrl_notify(buffer, sizeof(buffer));
+		break;
+	case EVENT_BUS_SENSOR_TEMPERATURE_UPDATED:
+		buffer[0] = SENSOR_TYPE_TEMPERATURE;
+		buffer[1] = (char)msg->param1;
+		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
+		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
+		simple_ctrl_notify(buffer, sizeof(buffer));
 		break;
 	}
 
@@ -247,6 +336,31 @@ void app_main(void)
 	simple_ctrl_set_class_id(CLASS_ID_SENSOR);
 	simple_ctrl_request_register(app_ctrl_request);
 	wifi_connect();
+
+	/* Sensor */
+	i2c_bus_init(I2C_BUS_SDA_PIN, I2C_BUS_SCL_PIN, i2c_dev_list, ARRAY_SIZE(i2c_dev_list));
+	vTaskDelay(pdMS_TO_TICKS(1000));
+
+	if (sensor_bh1750_is_active()) {
+		sensor_list[sensor_count].type = SENSOR_TYPE_BRIGHTNESS;
+		strncpy(sensor_list[sensor_count].name, "Brightness",
+			sizeof(sensor_list[sensor_count].name));
+		sensor_count++;
+		ESP_LOGI(TAG, "Sensor: brightness ready");
+	}
+	if (sensor_aht20_is_active()) {
+		sensor_list[sensor_count].type = SENSOR_TYPE_HUMIDITY;
+		strncpy(sensor_list[sensor_count].name, "Humidity",
+			sizeof(sensor_list[sensor_count].name));
+		sensor_count++;
+		ESP_LOGI(TAG, "Sensor: humidity ready");
+
+		sensor_list[sensor_count].type = SENSOR_TYPE_TEMPERATURE;
+		strncpy(sensor_list[sensor_count].name, "Temperature",
+			sizeof(sensor_list[sensor_count].name));
+		sensor_count++;
+		ESP_LOGI(TAG, "Sensor: temperature ready");
+	}
 
 	app_show_info();
 }
