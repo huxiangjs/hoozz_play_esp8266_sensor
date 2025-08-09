@@ -1,0 +1,6 @@
+[submodule "MCU/main/esp32-common"]
+	path = MCU/main/esp32-common
+	url = https://github.com/huxiangjs/esp32-common.git
+[submodule "MCU/main/esp8266-common"]
+	path = MCU/main/esp8266-common
+	url = https://github.com/huxiangjs/esp8266-common.git
