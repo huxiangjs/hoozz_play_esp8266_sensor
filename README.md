@@ -28,5 +28,5 @@ git clone https://github.com/huxiangjs/hoozz_play_esp8266_sensor.git --recurse-s
 cd hoozz_play_esp8266_sensor/MCU
 make -j$(nproc)
 make flash
-# make monitor
+make monitor    # Monitor UART log output
 ```
