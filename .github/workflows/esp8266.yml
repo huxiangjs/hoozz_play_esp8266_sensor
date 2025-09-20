@@ -81,6 +81,6 @@ jobs:
         pip install -r ESP8266_RTOS_SDK/requirements.txt
         export IDF_PATH=$(pwd)/ESP8266_RTOS_SDK/
         export PATH=$PATH:$(pwd)/xtensa-lx106-elf/bin
-        cd esp8266-sensor
+        cd esp8266-sensor/MCU/
         make defconfig
         make -j$(nproc)
