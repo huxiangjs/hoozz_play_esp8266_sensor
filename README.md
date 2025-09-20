@@ -30,3 +30,35 @@ make -j$(nproc)
 make flash
 make monitor    # Monitor UART log output
 ```
+
+## You can also directly burn the released bin file
+
+1. Download the latest release zip package from the Releases column
+2. Unzip the zip and you will see the following files:
+   ```
+   $ tree
+   .
+   |-- bootloader
+   |   `-- bootloader.bin
+   |-- partitions.bin
+   `-- sensor.bin
+
+   1 directory, 3 files
+   ```
+3. Open the latest official download tool `flash_download_tool` (official download address: [other-tools](https://www.espressif.com/en/support/download/other-tools))
+4. Use the following options: (1) `Chip Type [ESP8266]`; (2) `WorkMode [Develop]`; (3) `LoadMode [UART]`;
+5. Set the burn parameters according to the following table:
+
+   |    Parameters  |     Value   |
+   | :------------: | :---------: |
+   | bootloader.bin | 0x0000      |
+   | sensor.bin     | 0x10000     |
+   | partitions.bin | 0x8000      |
+   | SPI SPEED      | 40MHz       |
+   | SPI MODE       | DIO         |
+   | DoNotChgBin    | √           |
+   | COM            | (Your port) |
+   | BAUD           | 115200      |
+
+6. Finally click **Start** to burn
+
