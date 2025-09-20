@@ -135,3 +135,4 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: esp8266-sensor/MCU/build/release.zip
         asset_name: hoozz_play_esp8266_sensor_release_${{ github.ref_name }}.zip
+        asset_content_type: application/zip
