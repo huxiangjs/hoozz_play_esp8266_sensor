@@ -38,11 +38,11 @@ jobs:
         path: ESP8266_RTOS_SDK
 
     # Install gperf
-    - name: Install gperf
+    - name: Install Gperf
       run: sudo apt-get install -y gperf
 
     # Set python version
-    - name: Set up Python
+    - name: Set Up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
@@ -67,7 +67,7 @@ jobs:
         tar zxf xtensa-lx106-elf-linux64-1.22.0-100-ge567ec7-5.2.0.tar.gz
 
     # Cache pip dependencies
-    - name: Cache pip dependencies
+    - name: Cache Pip Dependencies
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
@@ -86,22 +86,22 @@ jobs:
         make -j$(nproc)
 
     # Create output file
-    - name: Create output ZIP
+    - name: Create Output ZIP
       run: |
         zip -r release.zip \
-            MCU/build/bootloader/bootloader.bin \
-            MCU/build/sensor.bin \
-            MCU/build/partitions.bin
+            esp8266-sensor/MCU/build/bootloader/bootloader.bin \
+            esp8266-sensor/MCU/build/sensor.bin \
+            esp8266-sensor/MCU/build/partitions.bin
 
     # Optionally upload the built ZIP as an artifact of the workflow
-    - name: Upload ZIP as artifact
+    - name: Upload ZIP As Artifact
       uses: actions/upload-artifact@v4
       with:
         name: release-zip
         path: release.zip
 
     # Check tag
-    - name: Check if the event is a tag push
+    - name: Check If The Event Is A Tag Push
       id: check_tag_push
       run: |
         if [[ $GITHUB_REF == refs/tags/* ]]; then
@@ -112,7 +112,7 @@ jobs:
         fi
 
     # Create release
-    - name: Create release
+    - name: Create Release
       if: steps.check_tag_push.outputs.IS_TAG_PUSH == 'true'
       id: create_release
       uses: actions/create-release@v1
@@ -125,7 +125,7 @@ jobs:
         prerelease: false
 
     # Upload ZIP to release
-    - name: Upload release asset
+    - name: Upload Release Asset
       if: steps.check_tag_push.outputs.IS_TAG_PUSH == 'true'
       uses: actions/upload-release-asset@v1
       env:
