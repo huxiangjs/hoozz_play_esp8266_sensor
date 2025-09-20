@@ -1,5 +1,8 @@
 # Hoozz Play ESP8266 Sensor
+
 Various sensors
+
+[![ESP8266 CI](https://github.com/huxiangjs/hoozz_play_esp8266_sensor/actions/workflows/esp8266.yml/badge.svg)](https://github.com/huxiangjs/hoozz_play_esp8266_sensor/actions/workflows/esp8266.yml)
 
 ## Sensor List
 
