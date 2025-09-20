@@ -1,0 +1,86 @@
+name: ESP8266 CI
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: true
+        default: 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    # Checkout the repository to the GitHub Actions runner
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        path: esp8266-sensor
+        fetch-depth: 1
+
+    # Get ESP8266-RTOS-SDK
+    - name: Get ESP8266-RTOS-SDK
+      uses: actions/checkout@v4
+      with:
+        repository: espressif/ESP8266_RTOS_SDK
+        ref: release/v3.3
+        fetch-depth: 1
+        path: ESP8266_RTOS_SDK
+
+    # Install gperf
+    - name: Install gperf
+      run: sudo apt-get install -y gperf
+
+    # Set python version
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # Cache ESP8266-RTOS-SDK
+    - name: Cache ESP8266-RTOS-SDK
+      id: cache-esp8266-sdk
+      uses: actions/cache@v3
+      with:
+        path: |
+          ESP8266_RTOS_SDK
+          xtensa-lx106-elf
+        key: ${{ runner.os }}-esp8266-sdk-${{ hashFiles('ESP8266_RTOS_SDK/.git/refs/heads/release/v3.3') }}
+        restore-keys: |
+          ${{ runner.os }}-esp8266-sdk-
+
+    # Install ESP8266-RTOS-SDK
+    - name: Install ESP8266-RTOS-SDK
+      if: steps.cache-esp8266-sdk.outputs.cache-hit != 'true'
+      run: |
+        wget https://dl.espressif.com/dl/xtensa-lx106-elf-linux64-1.22.0-100-ge567ec7-5.2.0.tar.gz
+        tar zxf xtensa-lx106-elf-linux64-1.22.0-100-ge567ec7-5.2.0.tar.gz
+
+    # Cache pip dependencies
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('ESP8266_RTOS_SDK/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    # Run ESP8266 build command
+    - name: Build
+      run: |
+        pip install -r ESP8266_RTOS_SDK/requirements.txt
+        export IDF_PATH=$(pwd)/ESP8266_RTOS_SDK/
+        export PATH=$PATH:$(pwd)/xtensa-lx106-elf/bin
+        cd esp8266-sensor
+        make defconfig
+        make -j$(nproc)
