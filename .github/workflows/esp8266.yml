@@ -86,12 +86,12 @@ jobs:
         make -j$(nproc)
 
     # Create output file
-    - name: Create Output ZIP
+    - name: Create output ZIP
       run: |
         zip -r release.zip \
-            -x MCU/build/bootloader/bootloader.bin \
-               MCU/build/sensor.bin \
-               MCU/build/partitions.bin
+            MCU/build/bootloader/bootloader.bin \
+            MCU/build/sensor.bin \
+            MCU/build/partitions.bin
 
     # Optionally upload the built ZIP as an artifact of the workflow
     - name: Upload ZIP as artifact
@@ -112,7 +112,7 @@ jobs:
         fi
 
     # Create release
-    - name: Create Release
+    - name: Create release
       if: steps.check_tag_push.outputs.IS_TAG_PUSH == 'true'
       id: create_release
       uses: actions/create-release@v1
@@ -124,8 +124,8 @@ jobs:
         draft: false
         prerelease: false
 
-    # Upload APK to release
-    - name: Upload Release Asset
+    # Upload ZIP to release
+    - name: Upload release asset
       if: steps.check_tag_push.outputs.IS_TAG_PUSH == 'true'
       uses: actions/upload-release-asset@v1
       env:
