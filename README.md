@@ -1,7 +1,12 @@
 # Hoozz Play ESP8266 Sensor
 Various sensors
 
-# ESP8266_RTOS_SDK Version
+## Sensor List
+
+### (1) Temperature/Humidity/Brightness Sensor
+![top](Images/product_view_sensor1.png)
+
+## ESP8266_RTOS_SDK Version
 ```shell
 $ git branch
 * release/v3.3
