@@ -88,17 +88,18 @@ jobs:
     # Create output file
     - name: Create Output ZIP
       run: |
+        cd esp8266-sensor/MCU/build/
         zip -r release.zip \
-            esp8266-sensor/MCU/build/bootloader/bootloader.bin \
-            esp8266-sensor/MCU/build/sensor.bin \
-            esp8266-sensor/MCU/build/partitions.bin
+            bootloader/bootloader.bin \
+            sensor.bin \
+            partitions.bin
 
-    # Optionally upload the built ZIP as an artifact of the workflow
-    - name: Upload ZIP As Artifact
+    # Optionally upload the built directory as an artifact of the workflow
+    - name: Upload Directory Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: release-zip
-        path: release.zip
+        name: build-output
+        path: esp8266-sensor/MCU/build/
 
     # Check tag
     - name: Check If The Event Is A Tag Push
@@ -132,5 +133,5 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset: release.zip
+        asset_path: esp8266-sensor/MCU/build/release.zip
         asset_name: hoozz_play_esp8266_sensor_release_${{ github.ref_name }}.zip
