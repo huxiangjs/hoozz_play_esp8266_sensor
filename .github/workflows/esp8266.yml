@@ -7,11 +7,11 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to build'
-        required: true
-        default: 'main'
+    # inputs:
+    #   branch:
+    #     description: 'Branch to build'
+    #     required: true
+    #     default: 'main'
 
 permissions:
   contents: write
@@ -25,7 +25,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-        path: esp8266-sensor
+        path: esp8266-build
         fetch-depth: 1
 
     # Get ESP8266-RTOS-SDK
@@ -81,25 +81,19 @@ jobs:
         pip install -r ESP8266_RTOS_SDK/requirements.txt
         export IDF_PATH=$(pwd)/ESP8266_RTOS_SDK/
         export PATH=$PATH:$(pwd)/xtensa-lx106-elf/bin
-        cd esp8266-sensor/MCU/
+        cd esp8266-build/MCU/
         make defconfig
         make -j$(nproc)
-
-    # Create output file
-    - name: Create Output ZIP
-      run: |
-        cd esp8266-sensor/MCU/build/
-        zip -r release.zip \
-            bootloader/bootloader.bin \
-            sensor.bin \
-            partitions.bin
+        project_name=$(cat Makefile | grep PROJECT_NAME | awk -F '=' '{print $2}' | tr -d '\r')
+        cd build
+        zip -r release.zip bootloader/bootloader.bin $project_name.bin partitions.bin
 
     # Optionally upload the built directory as an artifact of the workflow
-    - name: Upload Directory Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-output
-        path: esp8266-sensor/MCU/build/
+    # - name: Upload Directory Artifact
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: build-output
+    #     path: esp8266-sensor/MCU/build/
 
     # Check tag
     - name: Check If The Event Is A Tag Push
@@ -133,6 +127,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: esp8266-sensor/MCU/build/release.zip
-        asset_name: hoozz_play_esp8266_sensor_release_${{ github.ref_name }}.zip
+        asset_path: esp8266-build/MCU/build/release.zip
+        asset_name: ${{ github.event.repository.name }}_${{ github.ref_name }}.zip
         asset_content_type: application/zip
