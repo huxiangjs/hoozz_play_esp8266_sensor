@@ -34,7 +34,7 @@
 
 #include "event_bus.h"
 #include "keyboard.h"
-#include "spiffs.h"
+#include "store.h"
 #include "simple_ctrl.h"
 #include "wifi.h"
 #include "gpio_led.h"
@@ -317,7 +317,7 @@ void app_main(void)
 	/* install gpio isr service */
 	ESP_ERROR_CHECK(gpio_install_isr_service(0));
 
-	spiffs_init();
+	store_init();
 
 	/* Event bus */
 	event_bus_init();
