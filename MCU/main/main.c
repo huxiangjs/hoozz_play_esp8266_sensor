@@ -331,8 +331,7 @@ void app_main(void)
 	wifi_init();
 
 	/* Network ctrl */
-	simple_ctrl_init();
-	simple_ctrl_set_name("SENSOR");
+	simple_ctrl_init("SENSOR");
 	simple_ctrl_set_class_id(CLASS_ID_SENSOR);
 	simple_ctrl_request_register(app_ctrl_request);
 	wifi_connect();
