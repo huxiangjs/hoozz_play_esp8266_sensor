@@ -334,11 +334,9 @@ void app_main(void)
 	simple_ctrl_init("SENSOR");
 	simple_ctrl_set_class_id(CLASS_ID_SENSOR);
 	simple_ctrl_request_register(app_ctrl_request);
-	wifi_connect();
 
 	/* Sensor */
 	i2c_bus_init(I2C_BUS_SDA_PIN, I2C_BUS_SCL_PIN, i2c_dev_list, ARRAY_SIZE(i2c_dev_list));
-	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	if (sensor_bh1750_is_active()) {
 		sensor_list[sensor_count].type = SENSOR_TYPE_BRIGHTNESS;
@@ -360,6 +358,8 @@ void app_main(void)
 		sensor_count++;
 		ESP_LOGI(TAG, "Sensor: temperature ready");
 	}
+
+	wifi_connect();
 
 	app_show_info();
 }
