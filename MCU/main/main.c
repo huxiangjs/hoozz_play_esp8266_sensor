@@ -41,6 +41,7 @@
 #include "i2c_bus.h"
 #include "sensor_bh1750.h"
 #include "sensor_aht20.h"
+#include "sensor_sgp30.h"
 
 static const char *TAG = "APP-MAIN";
 
@@ -59,6 +60,8 @@ static const char *TAG = "APP-MAIN";
 #define SENSOR_TYPE_BRIGHTNESS		0x01
 #define SENSOR_TYPE_HUMIDITY		0x02
 #define SENSOR_TYPE_TEMPERATURE		0x03
+#define SENSOR_TYPE_VOC			0x04
+#define SENSOR_TYPE_CO2			0x05
 
 #define SENSOR_CMD_GET_COUNT		0x00
 #define SENSOR_CMD_GET_ITEM		0x01
@@ -66,7 +69,7 @@ static const char *TAG = "APP-MAIN";
 #define SENSOR_RESULT_OK		0x00
 #define SENSOR_RESULT_FAIL		0x01
 
-#define SENSOR_NUM_MAX			3
+#define SENSOR_NUM_MAX			5
 #define SENSOR_NAME_LEN_MAX		32
 
 static bool config_mode;
@@ -75,6 +78,7 @@ static QueueHandle_t led_queue;
 static struct i2c_dev_init i2c_dev_list[] = {
 	{ DEFAULT_BH1750_ADDR, "SENSOR-BH1750", sensor_bh1750_init, NULL },
 	{ DEFAULT_AHT20_ADDR,  "SENSOR-AHT20",  sensor_aht20_init, NULL },
+	{ DEFAULT_SGP30_ADDR,  "SENSOR-SGP30",  sensor_sgp30_init, NULL },
 };
 
 static uint32_t sensor_count;
@@ -291,6 +295,20 @@ static bool app_event_notify_callback(struct event_bus_msg *msg)
 		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
 		simple_ctrl_notify(buffer, sizeof(buffer));
 		break;
+	case EVENT_BUS_SENSOR_VOC_UPDATED:
+		buffer[0] = SENSOR_TYPE_VOC;
+		buffer[1] = (char)msg->param1;
+		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
+		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
+		simple_ctrl_notify(buffer, sizeof(buffer));
+		break;
+	case EVENT_BUS_SENSOR_CO2_UPDATED:
+		buffer[0] = SENSOR_TYPE_CO2;
+		buffer[1] = (char)msg->param1;
+		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
+		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
+		simple_ctrl_notify(buffer, sizeof(buffer));
+		break;
 	}
 
 	return false;
@@ -357,6 +375,19 @@ void app_main(void)
 			sizeof(sensor_list[sensor_count].name));
 		sensor_count++;
 		ESP_LOGI(TAG, "Sensor: temperature ready");
+	}
+	if (sensor_sgp30_is_active()) {
+		sensor_list[sensor_count].type = SENSOR_TYPE_VOC;
+		strncpy(sensor_list[sensor_count].name, "VOC",
+			sizeof(sensor_list[sensor_count].name));
+		sensor_count++;
+		ESP_LOGI(TAG, "Sensor: voc ready");
+
+		sensor_list[sensor_count].type = SENSOR_TYPE_CO2;
+		strncpy(sensor_list[sensor_count].name, "CO2",
+			sizeof(sensor_list[sensor_count].name));
+		sensor_count++;
+		ESP_LOGI(TAG, "Sensor: co2 ready");
 	}
 
 	wifi_connect();
