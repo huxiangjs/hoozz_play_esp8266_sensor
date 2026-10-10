@@ -9,6 +9,9 @@ Various sensors
 ### (1) Temperature/Humidity/Brightness Sensor
 ![top](Images/product_view_sensor1.png)
 
+### (2) tVOC/CO2eq Sensor
+![top](Images/product_view_sensor2.png)
+
 ## ESP8266_RTOS_SDK Version
 ```shell
 $ git branch

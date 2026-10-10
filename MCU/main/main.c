@@ -60,8 +60,8 @@ static const char *TAG = "APP-MAIN";
 #define SENSOR_TYPE_BRIGHTNESS		0x01
 #define SENSOR_TYPE_HUMIDITY		0x02
 #define SENSOR_TYPE_TEMPERATURE		0x03
-#define SENSOR_TYPE_VOC			0x04
-#define SENSOR_TYPE_CO2			0x05
+#define SENSOR_TYPE_TVOC		0x04
+#define SENSOR_TYPE_CO2EQ		0x05
 
 #define SENSOR_CMD_GET_COUNT		0x00
 #define SENSOR_CMD_GET_ITEM		0x01
@@ -295,15 +295,15 @@ static bool app_event_notify_callback(struct event_bus_msg *msg)
 		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
 		simple_ctrl_notify(buffer, sizeof(buffer));
 		break;
-	case EVENT_BUS_SENSOR_VOC_UPDATED:
-		buffer[0] = SENSOR_TYPE_VOC;
+	case EVENT_BUS_SENSOR_TVOC_UPDATED:
+		buffer[0] = SENSOR_TYPE_TVOC;
 		buffer[1] = (char)msg->param1;
 		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
 		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
 		simple_ctrl_notify(buffer, sizeof(buffer));
 		break;
-	case EVENT_BUS_SENSOR_CO2_UPDATED:
-		buffer[0] = SENSOR_TYPE_CO2;
+	case EVENT_BUS_SENSOR_CO2EQ_UPDATED:
+		buffer[0] = SENSOR_TYPE_CO2EQ;
 		buffer[1] = (char)msg->param1;
 		buffer[2] = (char)((msg->param2 >> 0) & 0xff);
 		buffer[3] = (char)((msg->param2 >> 8) & 0xff);
@@ -377,17 +377,17 @@ void app_main(void)
 		ESP_LOGI(TAG, "Sensor: temperature ready");
 	}
 	if (sensor_sgp30_is_active()) {
-		sensor_list[sensor_count].type = SENSOR_TYPE_VOC;
-		strncpy(sensor_list[sensor_count].name, "VOC",
+		sensor_list[sensor_count].type = SENSOR_TYPE_TVOC;
+		strncpy(sensor_list[sensor_count].name, "tVOC",
 			sizeof(sensor_list[sensor_count].name));
 		sensor_count++;
-		ESP_LOGI(TAG, "Sensor: voc ready");
+		ESP_LOGI(TAG, "Sensor: tVOC ready");
 
-		sensor_list[sensor_count].type = SENSOR_TYPE_CO2;
-		strncpy(sensor_list[sensor_count].name, "CO2",
+		sensor_list[sensor_count].type = SENSOR_TYPE_CO2EQ;
+		strncpy(sensor_list[sensor_count].name, "CO2eq",
 			sizeof(sensor_list[sensor_count].name));
 		sensor_count++;
-		ESP_LOGI(TAG, "Sensor: co2 ready");
+		ESP_LOGI(TAG, "Sensor: CO2eq ready");
 	}
 
 	wifi_connect();
