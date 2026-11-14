@@ -84,7 +84,7 @@ jobs:
         cd esp8266-build/MCU/
         make defconfig
         make -j$(nproc)
-        project_name=$(cat Makefile | grep PROJECT_NAME | awk -F '=' '{print $2}' | tr -d '\r')
+        project_name=$(cat Makefile | grep PROJECT_NAME | awk -F '=' '{print $2}' | tr -d ' \r')
         cd build
         # ota_file names the app bin the OTA update flashes (the app reads
         # it from the release zip to pick the firmware image)
