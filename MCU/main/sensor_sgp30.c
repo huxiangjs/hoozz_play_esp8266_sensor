@@ -1,1 +1,0 @@
-#include "esp8266-common/sensor_sgp30.c"
