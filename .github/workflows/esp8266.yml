@@ -86,7 +86,10 @@ jobs:
         make -j$(nproc)
         project_name=$(cat Makefile | grep PROJECT_NAME | awk -F '=' '{print $2}' | tr -d '\r')
         cd build
-        zip -r release.zip bootloader/bootloader.bin $project_name.bin partitions.bin
+        # ota_file names the app bin the OTA update flashes (the app reads
+        # it from the release zip to pick the firmware image)
+        echo "$project_name.bin" > ota_file
+        zip -r release.zip bootloader/bootloader.bin $project_name.bin partitions.bin ota_file
 
     # Optionally upload the built directory as an artifact of the workflow
     # - name: Upload Directory Artifact
