@@ -80,9 +80,12 @@ static bool config_mode;
 static QueueHandle_t led_queue;
 
 static struct i2c_dev_init i2c_dev_list[] = {
-	{ DEFAULT_BH1750_ADDR, "SENSOR-BH1750", sensor_bh1750_init, NULL },
-	{ DEFAULT_AHT20_ADDR,  "SENSOR-AHT20",  sensor_aht20_init, NULL },
-	{ DEFAULT_SGP30_ADDR,  "SENSOR-SGP30",  sensor_sgp30_init, NULL },
+	{ DEFAULT_BH1750_ADDR, "SENSOR-BH1750", sensor_bh1750_init, NULL,
+	  sensor_bh1750_stop, sensor_bh1750_is_active },
+	{ DEFAULT_AHT20_ADDR,  "SENSOR-AHT20",  sensor_aht20_init,  NULL,
+	  sensor_aht20_stop,  sensor_aht20_is_active },
+	{ DEFAULT_SGP30_ADDR,  "SENSOR-SGP30",  sensor_sgp30_init,  NULL,
+	  sensor_sgp30_stop,  sensor_sgp30_is_active },
 };
 
 static uint32_t sensor_count;
@@ -341,6 +344,21 @@ static const struct ota_transport ota_transports[] = {
 	{ "hoozz", hoozz_ota_open, hoozz_ota_size, hoozz_ota_read, hoozz_ota_close },
 };
 
+/*
+ * Called by the OTA transfer task right before it reboots the chip into
+ * the new image. Stop all the sensor polling tasks (the ones
+ * i2c_bus_init() started) so no I2C transaction is in flight at the
+ * reboot: unlike a cold boot (the only kind of boot this device ever
+ * had before OTA), a warm reboot (esp_restart) does not fully reset the
+ * I2C bus, and restarting with a transaction in progress can leave it
+ * locked.
+ */
+static void app_ota_pre_restart(void)
+{
+	ESP_LOGI(TAG, "OTA reboot imminent, stopping sensor tasks");
+	i2c_bus_stop();
+}
+
 void app_main(void)
 {
 	struct event_bus_msg msg = { EVENT_BUS_STARTUP, 0, 0};
@@ -361,10 +379,11 @@ void app_main(void)
 	ESP_ERROR_CHECK(nvs_flash_init());
 
 	/* Enable OTA (after NVS: the ESP-IDF flash backend's first-boot
-	 * validation stores its state there) */
+	 * validation stores its state there; the pre-restart callback
+	 * stops the sensor tasks before the reboot into the new image) */
 	simple_ctrl_ota_enable(APP_GIT_SHA APP_GIT_DIRTY, ota_transports,
 			sizeof(ota_transports) / sizeof(ota_transports[0]),
-			&esp_idf_ota_flash);
+			&esp_idf_ota_flash, app_ota_pre_restart);
 
 	/* install gpio isr service */
 	ESP_ERROR_CHECK(gpio_install_isr_service(0));
@@ -390,14 +409,14 @@ void app_main(void)
 	/* Sensor */
 	i2c_bus_init(I2C_BUS_SDA_PIN, I2C_BUS_SCL_PIN, i2c_dev_list, ARRAY_SIZE(i2c_dev_list));
 
-	if (sensor_bh1750_is_active()) {
+	if (sensor_bh1750_is_active(NULL)) {
 		sensor_list[sensor_count].type = SENSOR_TYPE_BRIGHTNESS;
 		strncpy(sensor_list[sensor_count].name, "Brightness",
 			sizeof(sensor_list[sensor_count].name));
 		sensor_count++;
 		ESP_LOGI(TAG, "Sensor: brightness ready");
 	}
-	if (sensor_aht20_is_active()) {
+	if (sensor_aht20_is_active(NULL)) {
 		sensor_list[sensor_count].type = SENSOR_TYPE_HUMIDITY;
 		strncpy(sensor_list[sensor_count].name, "Humidity",
 			sizeof(sensor_list[sensor_count].name));
@@ -410,7 +429,7 @@ void app_main(void)
 		sensor_count++;
 		ESP_LOGI(TAG, "Sensor: temperature ready");
 	}
-	if (sensor_sgp30_is_active()) {
+	if (sensor_sgp30_is_active(NULL)) {
 		sensor_list[sensor_count].type = SENSOR_TYPE_TVOC;
 		strncpy(sensor_list[sensor_count].name, "tVOC",
 			sizeof(sensor_list[sensor_count].name));
