@@ -80,11 +80,12 @@ static bool config_mode;
 static QueueHandle_t led_queue;
 
 static struct i2c_dev_init i2c_dev_list[] = {
-	{ DEFAULT_BH1750_ADDR, "SENSOR-BH1750", sensor_bh1750_init, NULL,
+	{ DEFAULT_BH1750_ADDR, "SENSOR-BH1750", NULL, sensor_bh1750_start, NULL,
 	  sensor_bh1750_stop, sensor_bh1750_is_active },
-	{ DEFAULT_AHT20_ADDR,  "SENSOR-AHT20",  sensor_aht20_init,  NULL,
+	{ DEFAULT_AHT20_ADDR,  "SENSOR-AHT20",  NULL, sensor_aht20_start,  NULL,
 	  sensor_aht20_stop,  sensor_aht20_is_active },
-	{ DEFAULT_SGP30_ADDR,  "SENSOR-SGP30",  sensor_sgp30_init,  NULL,
+	{ DEFAULT_SGP30_ADDR,  "SENSOR-SGP30",  sensor_sgp30_init,
+	  sensor_sgp30_start, NULL,
 	  sensor_sgp30_stop,  sensor_sgp30_is_active },
 };
 
